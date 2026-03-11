@@ -9,6 +9,8 @@ import {
   GitBranch,
   FolderKanban,
   Receipt,
+  Car,
+  FileSearch,
   Settings,
   Flame,
   ChevronLeft,
@@ -40,6 +42,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Delavci', icon: Users, path: ROUTES.DELAVCI },
       { label: 'Pipeline', icon: GitBranch, path: ROUTES.PIPELINE },
+      { label: 'Dokumenti', icon: FileSearch, path: ROUTES.DOKUMENTI },
     ],
   },
   {
@@ -47,6 +50,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Projekti', icon: FolderKanban, path: ROUTES.PROJEKTI },
       { label: 'Stroški', icon: Receipt, path: ROUTES.STROSKI },
+      { label: 'Vozila', icon: Car, path: ROUTES.VOZILA },
     ],
   },
   {

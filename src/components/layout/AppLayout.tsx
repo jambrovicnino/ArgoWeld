@@ -8,6 +8,7 @@ import { useWorkersStore } from '@/stores/workersStore';
 import { useProjectsStore } from '@/stores/projectsStore';
 import { useExpensesStore } from '@/stores/expensesStore';
 import { usePipelineStore } from '@/stores/pipelineStore';
+import { useVehiclesStore } from '@/stores/vehiclesStore';
 import { cn } from '@/lib/utils';
 
 export function AppLayout() {
@@ -16,13 +17,15 @@ export function AppLayout() {
   const initProjects = useProjectsStore((s) => s.init);
   const initExpenses = useExpensesStore((s) => s.init);
   const initPipeline = usePipelineStore((s) => s.init);
+  const initVehicles = useVehiclesStore((s) => s.init);
 
   useEffect(() => {
     initWorkers();
     initProjects();
     initExpenses();
     initPipeline();
-  }, [initWorkers, initProjects, initExpenses, initPipeline]);
+    initVehicles();
+  }, [initWorkers, initProjects, initExpenses, initPipeline, initVehicles]);
 
   return (
     <div className='min-h-screen bg-background'>

@@ -15,6 +15,37 @@ export interface WorkerDocument {
   opombe?: string;
 }
 
+export interface HealthCheck {
+  id: number;
+  datum_pregleda: string;
+  datum_naslednjega: string;
+  rezultat: 'sposoben' | 'pogojno_sposoben' | 'nesposoben';
+  ustanova: string;
+  tip_pregleda: string;
+  opombe?: string;
+}
+
+export interface WorkHistory {
+  id: number;
+  projekt_id?: number;
+  projekt_naziv: string;
+  lokacija: string;
+  drzava: string;
+  vloga: string;
+  od: string;
+  do?: string;
+  opis?: string;
+}
+
+export interface WeldingPhoto {
+  id: number;
+  naziv: string;
+  datum: string;
+  projekt_naziv?: string;
+  opis?: string;
+  url: string;
+}
+
 export interface Worker {
   id: number;
   ime: string;
@@ -29,4 +60,7 @@ export interface Worker {
   datum_zaposlitve: string;
   opombe: string;
   dokumenti: WorkerDocument[];
+  zdravniski_pregledi: HealthCheck[];
+  delovna_zgodovina: WorkHistory[];
+  fotografije: WeldingPhoto[];
 }

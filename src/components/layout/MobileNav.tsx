@@ -1,13 +1,13 @@
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/router/routes';
-import { LayoutDashboard, Users, FolderKanban, Receipt, Menu } from 'lucide-react';
+import { LayoutDashboard, Users, FolderKanban, Car, Menu } from 'lucide-react';
 
 const items = [
   { label: 'Plošča', icon: LayoutDashboard, path: ROUTES.DASHBOARD },
   { label: 'Delavci', icon: Users, path: ROUTES.DELAVCI },
   { label: 'Projekti', icon: FolderKanban, path: ROUTES.PROJEKTI },
-  { label: 'Stroški', icon: Receipt, path: ROUTES.STROSKI },
+  { label: 'Vozila', icon: Car, path: ROUTES.VOZILA },
   { label: 'Več', icon: Menu, path: ROUTES.NASTAVITVE },
 ];
 

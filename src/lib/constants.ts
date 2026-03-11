@@ -46,9 +46,27 @@ export const DOC_TYPES = [
   { value: 'a1_obrazec', label: 'Obrazec A1' },
 ] as const;
 
-export const NATIONALITIES = ['Indijec', 'Filipinec', 'Nepalec', 'Šrilankovčan', 'Bosanec', 'Slovenec', 'Drugo'] as const;
+export const NATIONALITIES = ['Srbija', 'Bosna in Hercegovina', 'Hrvaška', 'Slovenija', 'Indija', 'Filipini', 'Nepal', 'Šrilanka', 'Drugo'] as const;
 
-export const COUNTRIES = ['Slovenija', 'Avstrija', 'Italija', 'Nemčija', 'Hrvaška'] as const;
+export const COUNTRIES = ['Slovenija', 'Avstrija', 'Italija', 'Nemčija', 'Hrvaška', 'Švica', 'Francija'] as const;
+
+export const VEHICLE_TYPES = [
+  { value: 'lastno', label: 'Lastno vozilo' },
+  { value: 'najem', label: 'Najem (Rent-a-car)' },
+] as const;
+
+export const HEALTH_CHECK_RESULTS = [
+  { value: 'sposoben', label: 'Sposoben' },
+  { value: 'pogojno_sposoben', label: 'Pogojno sposoben' },
+  { value: 'nesposoben', label: 'Nesposoben' },
+] as const;
+
+export const HEALTH_CHECK_TYPES = [
+  'Predhodni pregled',
+  'Obdobni pregled',
+  'Usmerjeni pregled',
+  'Pregled po poškodbi',
+] as const;
 
 export const ALERT_THRESHOLDS = {
   TRC_CRITICAL_DAYS: 30,

@@ -28,6 +28,22 @@ export const demoProjects: Project[] = [
       drugo: 800,
     },
     delavci_ids: [1, 2],
+    razporeditve: [
+      {
+        id: 5001,
+        delavec_id: 1,
+        delavec_ime: 'Marko Kovačević',
+        od: '2025-01-15',
+        vloga: 'Varilec TIG',
+      },
+      {
+        id: 5002,
+        delavec_id: 2,
+        delavec_ime: 'Dragan Nikolić',
+        od: '2025-01-15',
+        vloga: 'Varilec MIG',
+      },
+    ],
     partnerji: [
       {
         id: 10,
@@ -65,6 +81,22 @@ export const demoProjects: Project[] = [
       drugo: 400,
     },
     delavci_ids: [3, 4],
+    razporeditve: [
+      {
+        id: 5003,
+        delavec_id: 3,
+        delavec_ime: 'Aleksandar Petrović',
+        od: '2025-02-01',
+        vloga: 'Vodja varilcev',
+      },
+      {
+        id: 5004,
+        delavec_id: 4,
+        delavec_ime: 'Ivan Horvat',
+        od: '2025-02-01',
+        vloga: 'Varilec TIG/SAW',
+      },
+    ],
     partnerji: [
       {
         id: 20,
@@ -102,6 +134,22 @@ export const demoProjects: Project[] = [
       drugo: 800,
     },
     delavci_ids: [6, 7],
+    razporeditve: [
+      {
+        id: 5005,
+        delavec_id: 6,
+        delavec_ime: 'Bojan Stojanović',
+        od: '2025-04-01',
+        vloga: 'Varilec TIG/MIG',
+      },
+      {
+        id: 5006,
+        delavec_id: 7,
+        delavec_ime: 'Nenad Đorđević',
+        od: '2025-04-01',
+        vloga: 'Varilec Stick/FCAW',
+      },
+    ],
     partnerji: [
       {
         id: 30,
@@ -145,6 +193,16 @@ export const demoProjects: Project[] = [
       drugo: 950,
     },
     delavci_ids: [],
+    razporeditve: [
+      {
+        id: 5007,
+        delavec_id: 1,
+        delavec_ime: 'Marko Kovačević',
+        od: '2024-06-01',
+        do: '2024-12-15',
+        vloga: 'Varilec TIG',
+      },
+    ],
     partnerji: [],
     opombe: 'Zaključen projekt, vse fakture plačane.',
   },

@@ -7,7 +7,9 @@ export const ROUTES = {
   PROJEKT_DETAIL: (id: string | number) => `/projekti/${id}`,
   STROSKI: '/stroski',
   STROSEK_NOV: '/stroski/nov',
+  VOZILA: '/vozila',
   PIPELINE: '/pipeline',
+  DOKUMENTI: '/dokumenti',
   OPOZORILA: '/opozorila',
   NASTAVITVE: '/nastavitve',
 } as const;

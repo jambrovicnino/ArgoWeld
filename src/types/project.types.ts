@@ -17,6 +17,15 @@ export interface ProjectPartner {
   opombe?: string;
 }
 
+export interface WorkerAssignment {
+  id: number;
+  delavec_id: number;
+  delavec_ime: string;
+  od: string;
+  do?: string;
+  vloga?: string;
+}
+
 export interface Project {
   id: number;
   naziv: string;
@@ -30,6 +39,7 @@ export interface Project {
   proracun: BudgetBreakdown;
   dejanski_stroski: BudgetBreakdown;
   delavci_ids: number[];
+  razporeditve: WorkerAssignment[];
   partnerji: ProjectPartner[];
   opombe: string;
 }
