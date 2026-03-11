@@ -136,7 +136,7 @@ function RentalInfoCard({ vozilo }: { vozilo: Vehicle }): React.JSX.Element | nu
 }
 
 /* ─── Stats row ─── */
-function StatsRow({ trips, vozilo }: { trips: VehicleTrip[]; vozilo: Vehicle }): React.JSX.Element {
+function StatsRow({ trips }: { trips: VehicleTrip[] }): React.JSX.Element {
   const totalKm = trips.reduce((sum, t) => sum + t.kilometri, 0);
   const uniqueDrivers = new Set(trips.map((t) => t.voznik_id)).size;
   const uniqueProjects = new Set(trips.filter((t) => t.projekt_id).map((t) => t.projekt_id)).size;
@@ -399,7 +399,7 @@ export function VoziloDetailPage(): React.JSX.Element {
       </Link>
       <VehicleHeader vozilo={vozilo} totalKm={totalKm} totalTrips={vehicleTrips.length} />
       <RentalInfoCard vozilo={vozilo} />
-      <StatsRow trips={vehicleTrips} vozilo={vozilo} />
+      <StatsRow trips={vehicleTrips} />
       <DriversSection trips={vehicleTrips} />
       <LocationsSection trips={vehicleTrips} />
       <TripHistory trips={vehicleTrips} />

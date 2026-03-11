@@ -250,7 +250,7 @@ function WorkerQuickView({ delavec }: { delavec: Worker }): React.JSX.Element {
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Zadnja potovanja</p>
           <div className="space-y-1.5">
-            {workerTrips.sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime()).slice(0, 3).map((trip) => (
+            {[...workerTrips].sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime()).slice(0, 3).map((trip) => (
               <div key={trip.id} className="flex items-center justify-between text-sm px-2 py-1.5 rounded bg-muted/50">
                 <div className="flex items-center gap-2 min-w-0">
                   <Car className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -380,7 +380,7 @@ function VehicleQuickView({ vozilo }: { vozilo: Vehicle }): React.JSX.Element {
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Zgodovina potovanj</p>
           <div className="space-y-1.5">
-            {vehicleTrips.sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime()).slice(0, 5).map((trip) => (
+            {[...vehicleTrips].sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime()).slice(0, 5).map((trip) => (
               <div key={trip.id} className="flex items-center justify-between text-sm px-2 py-1.5 rounded bg-muted/50">
                 <div className="flex items-center gap-2 min-w-0">
                   <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
@@ -449,7 +449,7 @@ export function DashboardPage(): React.JSX.Element {
 
   // Search results for the central command search
   const searchResults = useMemo(() => {
-    if (!searchQuery || searchQuery.length < 1) return { workers: [] as Worker[], vehicles: [] as Vehicle[] };
+    if (!searchQuery || searchQuery.length < 2) return { workers: [] as Worker[], vehicles: [] as Vehicle[] };
     const q = searchQuery.toLowerCase();
 
     const workers = delavci.filter((d) => {
@@ -467,7 +467,7 @@ export function DashboardPage(): React.JSX.Element {
   }, [searchQuery, delavci, vozila]);
 
   const hasResults = searchResults.workers.length > 0 || searchResults.vehicles.length > 0;
-  const isSearching = searchQuery.length >= 1;
+  const isSearching = searchQuery.length >= 2;
 
   // Handle clicking a search result — show inline detail
   function handleSelectWorker(id: number) {
