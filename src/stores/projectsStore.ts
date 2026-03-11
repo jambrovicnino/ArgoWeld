@@ -62,6 +62,16 @@ export const useProjectsStore = create<ProjectsState>()(
         })),
       resetDemo: () => set({ projekti: demoProjects }),
     }),
-    { name: 'argoweld-projects' }
+    {
+      name: 'argoweld-projects',
+      version: 2,
+      migrate: (_persisted, version) => {
+        // Version 1 → 2: added razporeditve (worker assignments) to projects
+        if (version < 2) {
+          return { projekti: demoProjects, initialized: true };
+        }
+        return _persisted as ProjectsState;
+      },
+    }
   )
 );

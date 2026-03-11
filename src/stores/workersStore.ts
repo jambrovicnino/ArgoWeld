@@ -100,6 +100,17 @@ export const useWorkersStore = create<WorkersState>()(
         })),
       resetDemo: () => set({ delavci: demoWorkers }),
     }),
-    { name: 'argoweld-workers' }
+    {
+      name: 'argoweld-workers',
+      version: 2,
+      migrate: (_persisted, version) => {
+        // Version 1 → 2: added zdravniski_pregledi, delovna_zgodovina, fotografije
+        // Reset to fresh demo data so users get the complete dataset
+        if (version < 2) {
+          return { delavci: demoWorkers, initialized: true };
+        }
+        return _persisted as WorkersState;
+      },
+    }
   )
 );

@@ -52,6 +52,16 @@ export const useVehiclesStore = create<VehiclesState>()(
         set((s) => ({ potovanja: s.potovanja.filter((t) => t.id !== id) })),
       resetDemo: () => set({ vozila: demoVehicles, potovanja: demoVehicleTrips }),
     }),
-    { name: 'argoweld-vehicles' }
+    {
+      name: 'argoweld-vehicles',
+      version: 2,
+      migrate: (_persisted, version) => {
+        // Version 1 → 2: initial vehicle data with trips
+        if (version < 2) {
+          return { vozila: demoVehicles, potovanja: demoVehicleTrips, initialized: true };
+        }
+        return _persisted as VehiclesState;
+      },
+    }
   )
 );
