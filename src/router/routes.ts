@@ -8,6 +8,7 @@ export const ROUTES = {
   STROSKI: '/stroski',
   STROSEK_NOV: '/stroski/nov',
   VOZILA: '/vozila',
+  VOZILO_DETAIL: (id: string | number) => `/vozila/${id}`,
   PIPELINE: '/pipeline',
   DOKUMENTI: '/dokumenti',
   OPOZORILA: '/opozorila',

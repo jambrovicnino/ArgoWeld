@@ -9,6 +9,7 @@ import { ProjektDetailPage } from '@/pages/projects/ProjektDetailPage';
 import { StroskiListPage } from '@/pages/expenses/StroskiListPage';
 import { StrosekCreatePage } from '@/pages/expenses/StrosekCreatePage';
 import { VozilaPage } from '@/pages/VozilaPage';
+import { VoziloDetailPage } from '@/pages/vehicles/VoziloDetailPage';
 import { PipelinePage } from '@/pages/PipelinePage';
 import { DokumentiPage } from '@/pages/DokumentiPage';
 import { OpozorilaPage } from '@/pages/OpozorilaPage';
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
       { path: 'stroski', element: <StroskiListPage /> },
       { path: 'stroski/nov', element: <StrosekCreatePage /> },
       { path: 'vozila', element: <VozilaPage /> },
+      { path: 'vozila/:id', element: <VoziloDetailPage /> },
       { path: 'pipeline', element: <PipelinePage /> },
       { path: 'dokumenti', element: <DokumentiPage /> },
       { path: 'opozorila', element: <OpozorilaPage /> },

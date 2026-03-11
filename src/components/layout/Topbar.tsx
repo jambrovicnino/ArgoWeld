@@ -1,9 +1,10 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Menu, Search, Bell, Settings, User, FolderKanban, ArrowRight } from 'lucide-react';
+import { Menu, Search, Bell, Settings, User, FolderKanban, Car, ArrowRight } from 'lucide-react';
 import { useUIStore } from '@/stores/uiStore';
 import { useWorkersStore } from '@/stores/workersStore';
 import { useProjectsStore } from '@/stores/projectsStore';
+import { useVehiclesStore } from '@/stores/vehiclesStore';
 import { ROUTES } from '@/router/routes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 interface SearchResult {
-  type: 'delavec' | 'projekt';
+  type: 'delavec' | 'projekt' | 'vozilo';
   id: number;
   label: string;
   sublabel: string;
@@ -30,6 +31,7 @@ export function Topbar() {
   const navigate = useNavigate();
   const { delavci } = useWorkersStore();
   const { projekti } = useProjectsStore();
+  const { vozila } = useVehiclesStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [showResults, setShowResults] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -75,8 +77,20 @@ export function Topbar() {
       }
     }
 
-    return results.slice(0, 8);
-  }, [searchQuery, delavci, projekti]);
+    for (const v of vozila) {
+      if (v.naziv.toLowerCase().includes(q) || v.registrska.toLowerCase().includes(q) || (v.najemodajalec && v.najemodajalec.toLowerCase().includes(q))) {
+        results.push({
+          type: 'vozilo',
+          id: v.id,
+          label: `${v.naziv} (${v.registrska})`,
+          sublabel: v.tip === 'najem' ? `Rent-a-car · ${v.najemodajalec || ''}` : 'Lastno vozilo',
+          path: ROUTES.VOZILO_DETAIL(v.id),
+        });
+      }
+    }
+
+    return results.slice(0, 10);
+  }, [searchQuery, delavci, projekti, vozila]);
 
   function handleResultClick(path: string) {
     navigate(path);
@@ -94,7 +108,7 @@ export function Topbar() {
         <div ref={searchRef} className='relative hidden md:block w-full max-w-sm'>
           <Search className='absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400' />
           <Input
-            placeholder='Išči delavce, projekte...'
+            placeholder='Išči delavce, projekte, vozila...'
             className='pl-9 bg-gray-50 border-gray-200'
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setShowResults(true); }}
@@ -111,6 +125,8 @@ export function Topbar() {
                 >
                   {result.type === 'delavec' ? (
                     <User className='h-4 w-4 text-blue-500 shrink-0' />
+                  ) : result.type === 'vozilo' ? (
+                    <Car className='h-4 w-4 text-amber-500 shrink-0' />
                   ) : (
                     <FolderKanban className='h-4 w-4 text-emerald-500 shrink-0' />
                   )}

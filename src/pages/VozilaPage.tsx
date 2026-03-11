@@ -138,7 +138,8 @@ export function VozilaPage(): React.JSX.Element {
               {vozila.map((vozilo) => {
                 const stats = vehicleStats.get(vozilo.id);
                 return (
-                  <Card key={vozilo.id} className="hover:shadow-md transition-shadow">
+                  <Link key={vozilo.id} to={ROUTES.VOZILO_DETAIL(vozilo.id)}>
+                  <Card className="hover:shadow-md transition-shadow cursor-pointer">
                     <CardContent className="pt-6 space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <div>
@@ -178,6 +179,7 @@ export function VozilaPage(): React.JSX.Element {
                       )}
                     </CardContent>
                   </Card>
+                  </Link>
                 );
               })}
             </div>

@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { useMemo, useState, useRef, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   BarChart,
   Bar,
@@ -8,9 +8,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   Legend,
 } from 'recharts';
 import {
@@ -22,20 +19,41 @@ import {
   TrendingUp,
   FileWarning,
   ArrowRight,
+  Search,
+  User,
+  FolderKanban,
+  Car,
+  MapPin,
+  Calendar,
+  Wrench,
+  Phone,
+  Globe,
+  Shield,
+  Heart,
+  Route,
+  Building2,
+  CreditCard,
+  Gauge,
+  Camera,
+  X,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { StatusBadge } from '@/components/common/StatusBadge';
 import { useWorkersStore } from '@/stores/workersStore';
 import { useProjectsStore } from '@/stores/projectsStore';
 import { useExpensesStore } from '@/stores/expensesStore';
 import { usePipelineStore } from '@/stores/pipelineStore';
-import { EXPENSE_CATEGORIES, PIPELINE_STAGES, PROJECT_PHASES, ALERT_THRESHOLDS } from '@/lib/constants';
+import { useVehiclesStore } from '@/stores/vehiclesStore';
+import { EXPENSE_CATEGORIES, PIPELINE_STAGES, PROJECT_PHASES, ALERT_THRESHOLDS, DOC_TYPES } from '@/lib/constants';
 import { ROUTES } from '@/router/routes';
-import type { Alert } from '@/types';
-import type { BudgetBreakdown } from '@/types';
+import { formatDate, formatCurrency, getInitials, daysUntilExpiry, validityColor } from '@/lib/utils';
+import type { Alert, BudgetBreakdown, Worker, Vehicle } from '@/types';
 
+/* ─── Helpers ─── */
 function sumBudget(budget: BudgetBreakdown): number {
   return budget.delo + budget.transport + budget.nastanitev + budget.orodje + budget.dnevnice + budget.drugo;
 }
@@ -49,7 +67,7 @@ function formatEur(amount: number): string {
   }).format(amount);
 }
 
-function formatDate(dateStr: string): string {
+function fmtDate(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('sl-SI', {
     day: 'numeric',
     month: 'short',
@@ -84,11 +102,336 @@ function getBudgetProgressClass(percentage: number): string {
   return '[&>div]:bg-emerald-500';
 }
 
+function getDocTypeLabel(tipValue: string): string {
+  const docType = DOC_TYPES.find((d) => d.value === tipValue);
+  return docType?.label ?? tipValue;
+}
+
+/* ─── Worker quick-view card (inline in dashboard search) ─── */
+function WorkerQuickView({ delavec }: { delavec: Worker }): React.JSX.Element {
+  const { projekti } = useProjectsStore();
+  const { potovanja } = useVehiclesStore();
+  const currentProject = delavec.trenutni_projekt_id
+    ? projekti.find((p) => p.id === delavec.trenutni_projekt_id)?.naziv
+    : undefined;
+  const workerTrips = potovanja.filter((t) => t.voznik_id === delavec.id);
+  const latestHealth = [...(delavec.zdravniski_pregledi || [])].sort(
+    (a, b) => new Date(b.datum_pregleda).getTime() - new Date(a.datum_pregleda).getTime()
+  )[0];
+
+  return (
+    <div className="space-y-4">
+      {/* Profile */}
+      <div className="flex gap-4">
+        <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xl font-bold shrink-0">
+          {getInitials(delavec.ime, delavec.priimek)}
+        </div>
+        <div className="min-w-0 space-y-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-lg font-bold">{delavec.ime} {delavec.priimek}</h3>
+            <StatusBadge status={delavec.status} />
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1"><Globe className="h-3.5 w-3.5" />{delavec.narodnost}</span>
+            <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" />{delavec.telefon}</span>
+            <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />Od {formatDate(delavec.datum_zaposlitve)}</span>
+            {currentProject && <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5" />{currentProject}</span>}
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {delavec.tipi_varjenja.map((tip) => (
+              <Badge key={tip} variant="outline" className="text-[10px] gap-0.5"><Wrench className="h-2.5 w-2.5" />{tip}</Badge>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-blue-50 rounded-lg px-3 py-2 text-center">
+          <p className="text-lg font-bold text-blue-700">{delavec.dokumenti.filter((d) => d.status_veljavnosti === 'veljaven').length}/{delavec.dokumenti.length}</p>
+          <p className="text-[10px] text-blue-600 font-medium">Velj. dokumentov</p>
+        </div>
+        <div className="bg-purple-50 rounded-lg px-3 py-2 text-center">
+          <p className="text-lg font-bold text-purple-700">{(delavec.delovna_zgodovina || []).length}</p>
+          <p className="text-[10px] text-purple-600 font-medium">Projektov</p>
+        </div>
+        <div className="bg-emerald-50 rounded-lg px-3 py-2 text-center">
+          <p className="text-lg font-bold text-emerald-700">
+            {latestHealth ? (latestHealth.rezultat === 'sposoben' ? '✓' : latestHealth.rezultat === 'pogojno_sposoben' ? '~' : '✗') : '—'}
+          </p>
+          <p className="text-[10px] text-emerald-600 font-medium">Zdravje</p>
+        </div>
+        <div className="bg-amber-50 rounded-lg px-3 py-2 text-center">
+          <p className="text-lg font-bold text-amber-700">{workerTrips.length}</p>
+          <p className="text-[10px] text-amber-600 font-medium">Potovanj</p>
+        </div>
+      </div>
+
+      {/* Documents summary */}
+      {delavec.dokumenti.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Dokumenti</p>
+          <div className="space-y-1.5">
+            {delavec.dokumenti.map((doc) => {
+              const days = daysUntilExpiry(doc.datum_poteka);
+              return (
+                <div key={doc.id} className="flex items-center justify-between text-sm px-2 py-1.5 rounded bg-muted/50">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Shield className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="truncate">{doc.naziv}</span>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <StatusBadge status={doc.status_veljavnosti} />
+                    {doc.datum_poteka && (
+                      <span className={`text-xs ${validityColor(days)}`}>{fmtDate(doc.datum_poteka)}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Work history */}
+      {(delavec.delovna_zgodovina || []).length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Delovna zgodovina</p>
+          <div className="space-y-1.5">
+            {(delavec.delovna_zgodovina || []).slice(0, 4).map((entry) => (
+              <div key={entry.id} className="flex items-center justify-between text-sm px-2 py-1.5 rounded bg-muted/50">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="truncate">{entry.projekt_naziv}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">{entry.vloga}</span>
+                </div>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {fmtDate(entry.od)} — {entry.do ? fmtDate(entry.do) : 'danes'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Health checks */}
+      {(delavec.zdravniski_pregledi || []).length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Zdravniški pregledi</p>
+          <div className="space-y-1.5">
+            {(delavec.zdravniski_pregledi || []).slice(0, 3).map((hc) => (
+              <div key={hc.id} className="flex items-center justify-between text-sm px-2 py-1.5 rounded bg-muted/50">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Heart className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="truncate">{hc.tip_pregleda}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Badge variant={hc.rezultat === 'sposoben' ? 'success' : hc.rezultat === 'pogojno_sposoben' ? 'warning' : 'destructive'} className="text-[10px]">
+                    {hc.rezultat === 'sposoben' ? 'Sposoben' : hc.rezultat === 'pogojno_sposoben' ? 'Pogojno' : 'Nesposoben'}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">{fmtDate(hc.datum_pregleda)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Photos count */}
+      {(delavec.fotografije || []).length > 0 && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Camera className="h-4 w-4" />
+          <span>{(delavec.fotografije || []).length} fotografij varilskih del</span>
+        </div>
+      )}
+
+      {/* Vehicle trips */}
+      {workerTrips.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Zadnja potovanja</p>
+          <div className="space-y-1.5">
+            {workerTrips.sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime()).slice(0, 3).map((trip) => (
+              <div key={trip.id} className="flex items-center justify-between text-sm px-2 py-1.5 rounded bg-muted/50">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Car className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="truncate">{trip.od_lokacija} → {trip.do_lokacija}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-muted-foreground">{trip.vozilo_naziv}</span>
+                  <Badge variant="outline" className="text-[10px]">{trip.kilometri} km</Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <Link to={ROUTES.DELAVEC_DETAIL(delavec.id)}>
+        <Button variant="outline" size="sm" className="w-full gap-1.5">
+          Odpri celoten profil <ArrowRight className="h-3.5 w-3.5" />
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
+/* ─── Vehicle quick-view card ─── */
+function VehicleQuickView({ vozilo }: { vozilo: Vehicle }): React.JSX.Element {
+  const { potovanja } = useVehiclesStore();
+  const vehicleTrips = potovanja.filter((t) => t.vozilo_id === vozilo.id);
+  const totalKm = vehicleTrips.reduce((sum, t) => sum + t.kilometri, 0);
+  const uniqueDrivers = new Map<number, string>();
+  const uniqueProjects = new Map<number, string>();
+  const locations = new Set<string>();
+
+  for (const trip of vehicleTrips) {
+    uniqueDrivers.set(trip.voznik_id, trip.voznik_ime);
+    if (trip.projekt_id && trip.projekt_naziv) {
+      uniqueProjects.set(trip.projekt_id, trip.projekt_naziv);
+    }
+    locations.add(trip.od_lokacija);
+    locations.add(trip.do_lokacija);
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Vehicle header */}
+      <div className="flex gap-4">
+        <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+          <Car className="h-8 w-8 text-blue-600" />
+        </div>
+        <div className="min-w-0 space-y-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-lg font-bold">{vozilo.naziv}</h3>
+            <Badge variant={vozilo.tip === 'lastno' ? 'success' : 'accent'}>
+              {vozilo.tip === 'lastno' ? 'Lastno' : 'Rent-a-car'}
+            </Badge>
+          </div>
+          <p className="text-sm font-mono text-muted-foreground">{vozilo.registrska}</p>
+          {vozilo.opombe && <p className="text-sm text-muted-foreground">{vozilo.opombe}</p>}
+        </div>
+      </div>
+
+      {/* Rental info */}
+      {vozilo.tip === 'najem' && (
+        <div className="bg-purple-50 rounded-lg px-4 py-3 space-y-2">
+          <p className="text-xs font-semibold text-purple-700 uppercase tracking-wider">Podatki o najemu</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+            <div>
+              <span className="text-muted-foreground">Najemodajalec: </span>
+              <span className="font-medium">{vozilo.najemodajalec || '—'}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Obdobje: </span>
+              <span className="font-medium">
+                {vozilo.datum_najema_od ? fmtDate(vozilo.datum_najema_od) : '—'} — {vozilo.datum_najema_do ? fmtDate(vozilo.datum_najema_do) : '—'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-blue-50 rounded-lg px-3 py-2 text-center">
+          <p className="text-lg font-bold text-blue-700">{vehicleTrips.length}</p>
+          <p className="text-[10px] text-blue-600 font-medium">Potovanj</p>
+        </div>
+        <div className="bg-amber-50 rounded-lg px-3 py-2 text-center">
+          <p className="text-lg font-bold text-amber-700">{totalKm.toLocaleString('sl-SI')}</p>
+          <p className="text-[10px] text-amber-600 font-medium">Kilometrov</p>
+        </div>
+        <div className="bg-emerald-50 rounded-lg px-3 py-2 text-center">
+          <p className="text-lg font-bold text-emerald-700">{uniqueDrivers.size}</p>
+          <p className="text-[10px] text-emerald-600 font-medium">Voznikov</p>
+        </div>
+        <div className="bg-purple-50 rounded-lg px-3 py-2 text-center">
+          <p className="text-lg font-bold text-purple-700">{uniqueProjects.size}</p>
+          <p className="text-[10px] text-purple-600 font-medium">Projektov</p>
+        </div>
+      </div>
+
+      {/* Drivers */}
+      {uniqueDrivers.size > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Vozniki</p>
+          <div className="space-y-1.5">
+            {Array.from(uniqueDrivers.entries()).map(([dId, dName]) => {
+              const dTrips = vehicleTrips.filter((t) => t.voznik_id === dId);
+              const dKm = dTrips.reduce((s, t) => s + t.kilometri, 0);
+              return (
+                <Link key={dId} to={ROUTES.DELAVEC_DETAIL(dId)} className="block">
+                  <div className="flex items-center justify-between text-sm px-2 py-1.5 rounded bg-muted/50 hover:bg-muted transition-colors">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="truncate font-medium">{dName}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0">{dTrips.length}× · {dKm.toLocaleString('sl-SI')} km</span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Trip history */}
+      {vehicleTrips.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Zgodovina potovanj</p>
+          <div className="space-y-1.5">
+            {vehicleTrips.sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime()).slice(0, 5).map((trip) => (
+              <div key={trip.id} className="flex items-center justify-between text-sm px-2 py-1.5 rounded bg-muted/50">
+                <div className="flex items-center gap-2 min-w-0">
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="truncate">{trip.od_lokacija} → {trip.do_lokacija}</span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-muted-foreground">{trip.voznik_ime}</span>
+                  <span className="text-xs text-muted-foreground">{fmtDate(trip.datum)}</span>
+                  <Badge variant="outline" className="text-[10px]">{trip.kilometri} km</Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Locations */}
+      {locations.size > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Lokacije / Gradbišča</p>
+          <div className="flex flex-wrap gap-1.5">
+            {Array.from(locations).map((loc) => (
+              <Badge key={loc} variant="outline" className="text-xs gap-1">
+                <MapPin className="h-3 w-3" />{loc}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <Link to={ROUTES.VOZILO_DETAIL(vozilo.id)}>
+        <Button variant="outline" size="sm" className="w-full gap-1.5">
+          Odpri celotno kartico vozila <ArrowRight className="h-3.5 w-3.5" />
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
+/* ─── Main Dashboard ─── */
 export function DashboardPage(): React.JSX.Element {
+  const navigate = useNavigate();
   const { delavci } = useWorkersStore();
   const { projekti } = useProjectsStore();
   const { stroski } = useExpensesStore();
   const { kandidati } = usePipelineStore();
+  const { vozila, potovanja } = useVehiclesStore();
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedResult, setSelectedResult] = useState<{ type: 'delavec' | 'vozilo'; id: number } | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const aktivniDelavci = useMemo(
     () => delavci.filter((d) => d.status === 'zaposlen').length,
@@ -104,6 +447,43 @@ export function DashboardPage(): React.JSX.Element {
     return stroski.reduce((sum, s) => sum + s.znesek, 0);
   }, [stroski]);
 
+  // Search results for the central command search
+  const searchResults = useMemo(() => {
+    if (!searchQuery || searchQuery.length < 1) return { workers: [] as Worker[], vehicles: [] as Vehicle[] };
+    const q = searchQuery.toLowerCase();
+
+    const workers = delavci.filter((d) => {
+      const fullName = `${d.ime} ${d.priimek}`.toLowerCase();
+      return fullName.includes(q) || d.narodnost.toLowerCase().includes(q) || d.telefon.includes(q);
+    });
+
+    const vehicles = vozila.filter((v) =>
+      v.naziv.toLowerCase().includes(q) ||
+      v.registrska.toLowerCase().includes(q) ||
+      (v.najemodajalec && v.najemodajalec.toLowerCase().includes(q))
+    );
+
+    return { workers, vehicles };
+  }, [searchQuery, delavci, vozila]);
+
+  const hasResults = searchResults.workers.length > 0 || searchResults.vehicles.length > 0;
+  const isSearching = searchQuery.length >= 1;
+
+  // Handle clicking a search result — show inline detail
+  function handleSelectWorker(id: number) {
+    setSelectedResult({ type: 'delavec', id });
+  }
+  function handleSelectVehicle(id: number) {
+    setSelectedResult({ type: 'vozilo', id });
+  }
+  function clearSearch() {
+    setSearchQuery('');
+    setSelectedResult(null);
+  }
+
+  const selectedWorker = selectedResult?.type === 'delavec' ? delavci.find((d) => d.id === selectedResult.id) : undefined;
+  const selectedVehicle = selectedResult?.type === 'vozilo' ? vozila.find((v) => v.id === selectedResult.id) : undefined;
+
   // Alerts: document issues for workers
   const alerts = useMemo((): Alert[] => {
     const result: Alert[] = [];
@@ -118,7 +498,7 @@ export function DashboardPage(): React.JSX.Element {
             tip: 'trc_potekel',
             resnost: 'kriticno',
             naslov: `TRC potekel: ${fullName}`,
-            opis: doc.datum_poteka ? `Potekel dne ${formatDate(doc.datum_poteka)}` : 'TRC je potekel',
+            opis: doc.datum_poteka ? `Potekel dne ${fmtDate(doc.datum_poteka)}` : 'TRC je potekel',
             povezava: ROUTES.DELAVEC_DETAIL(delavec.id),
           });
         }
@@ -129,7 +509,7 @@ export function DashboardPage(): React.JSX.Element {
             tip: 'trc_poteka',
             resnost: 'opozorilo',
             naslov: `TRC poteka kmalu: ${fullName}`,
-            opis: doc.datum_poteka ? `Poteka dne ${formatDate(doc.datum_poteka)}` : 'TRC poteka kmalu',
+            opis: doc.datum_poteka ? `Poteka dne ${fmtDate(doc.datum_poteka)}` : 'TRC poteka kmalu',
             povezava: ROUTES.DELAVEC_DETAIL(delavec.id),
           });
         }
@@ -140,7 +520,7 @@ export function DashboardPage(): React.JSX.Element {
             tip: 'certifikat_potekel',
             resnost: 'kriticno',
             naslov: `Certifikat potekel: ${fullName}`,
-            opis: doc.datum_poteka ? `Potekel dne ${formatDate(doc.datum_poteka)}` : 'Varilski certifikat je potekel',
+            opis: doc.datum_poteka ? `Potekel dne ${fmtDate(doc.datum_poteka)}` : 'Varilski certifikat je potekel',
             povezava: ROUTES.DELAVEC_DETAIL(delavec.id),
           });
         }
@@ -151,7 +531,7 @@ export function DashboardPage(): React.JSX.Element {
             tip: 'certifikat_poteka',
             resnost: 'opozorilo',
             naslov: `Certifikat poteka kmalu: ${fullName}`,
-            opis: doc.datum_poteka ? `Poteka dne ${formatDate(doc.datum_poteka)}` : 'Varilski certifikat poteka kmalu',
+            opis: doc.datum_poteka ? `Poteka dne ${fmtDate(doc.datum_poteka)}` : 'Varilski certifikat poteka kmalu',
             povezava: ROUTES.DELAVEC_DETAIL(delavec.id),
           });
         }
@@ -189,11 +569,10 @@ export function DashboardPage(): React.JSX.Element {
     return result;
   }, [delavci, aktivniProjekti]);
 
-  // Monthly expense chart data - last 6 months
+  // Monthly expense chart data
   const monthlyExpenseData = useMemo(() => {
     const months: Record<string, Record<string, number>> = {};
 
-    // Build months from actual expense data
     for (const expense of stroski) {
       const d = new Date(expense.datum);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -224,7 +603,7 @@ export function DashboardPage(): React.JSX.Element {
     });
   }, [aktivniProjekti]);
 
-  // Recent pipeline candidates, sorted by expected arrival
+  // Recent pipeline candidates
   const recentPipeline = useMemo(() => {
     return [...kandidati]
       .sort((a, b) => new Date(a.pricakovani_prihod).getTime() - new Date(b.pricakovani_prihod).getTime())
@@ -241,6 +620,124 @@ export function DashboardPage(): React.JSX.Element {
         <h1 className="text-2xl font-bold">Nadzorna plošča</h1>
         <p className="text-muted-foreground mt-1">Pregled poslovanja ArgoWeld</p>
       </div>
+
+      {/* ═══════════════════════════════════════════════════════ */}
+      {/* Central Command Search */}
+      {/* ═══════════════════════════════════════════════════════ */}
+      <Card className="border-2 border-primary/20 bg-gradient-to-r from-blue-50/50 to-white">
+        <CardContent className="pt-6 pb-4">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Search className="h-6 w-6 text-primary" />
+              <div>
+                <h2 className="text-lg font-semibold">Iskanje po bazi podatkov</h2>
+                <p className="text-sm text-muted-foreground">Vpišite ime delavca, vozila ali registrsko številko</p>
+              </div>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                ref={searchRef}
+                placeholder="Vpišite ime delavca ali vozila..."
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setSelectedResult(null); }}
+                className="pl-12 h-12 text-base bg-white border-2 focus-visible:ring-primary/20"
+              />
+              {searchQuery && (
+                <button type="button" onClick={clearSearch} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <X className="h-5 w-5" />
+                </button>
+              )}
+            </div>
+
+            {/* Search results */}
+            {isSearching && (
+              <div className="space-y-4">
+                {!hasResults && (
+                  <p className="text-center text-muted-foreground py-4">Ni rezultatov za "<span className="font-medium">{searchQuery}</span>"</p>
+                )}
+
+                {/* Worker results */}
+                {searchResults.workers.length > 0 && !selectedResult && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <User className="h-3.5 w-3.5" />Delavci ({searchResults.workers.length})
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {searchResults.workers.map((d) => (
+                        <button
+                          key={d.id}
+                          type="button"
+                          onClick={() => handleSelectWorker(d.id)}
+                          className="flex items-center gap-3 p-3 rounded-lg border bg-white hover:bg-accent/50 transition-colors text-left w-full"
+                        >
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold shrink-0">
+                            {getInitials(d.ime, d.priimek)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{d.ime} {d.priimek}</p>
+                            <p className="text-xs text-muted-foreground truncate">{d.narodnost} · {d.tipi_varjenja.join(', ')}</p>
+                          </div>
+                          <StatusBadge status={d.status} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Vehicle results */}
+                {searchResults.vehicles.length > 0 && !selectedResult && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <Car className="h-3.5 w-3.5" />Vozila ({searchResults.vehicles.length})
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {searchResults.vehicles.map((v) => (
+                        <button
+                          key={v.id}
+                          type="button"
+                          onClick={() => handleSelectVehicle(v.id)}
+                          className="flex items-center gap-3 p-3 rounded-lg border bg-white hover:bg-accent/50 transition-colors text-left w-full"
+                        >
+                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                            <Car className="h-5 w-5 text-blue-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{v.naziv}</p>
+                            <p className="text-xs text-muted-foreground font-mono">{v.registrska}</p>
+                          </div>
+                          <Badge variant={v.tip === 'lastno' ? 'success' : 'accent'} className="text-[10px] shrink-0">
+                            {v.tip === 'lastno' ? 'Lastno' : 'Najem'}
+                          </Badge>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Inline detail view */}
+                {selectedResult && (selectedWorker || selectedVehicle) && (
+                  <Card className="border-2 border-primary/10 bg-white">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedResult(null)}
+                          className="text-sm text-primary hover:underline flex items-center gap-1"
+                        >
+                          ← Nazaj na rezultate
+                        </button>
+                      </div>
+                      {selectedWorker && <WorkerQuickView delavec={selectedWorker} />}
+                      {selectedVehicle && <VehicleQuickView vozilo={selectedVehicle} />}
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -282,6 +779,24 @@ export function DashboardPage(): React.JSX.Element {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Vozila</CardTitle>
+            <Car className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{vozila.length}</div>
+            <p className="text-xs text-muted-foreground">
+              {potovanja.length} potovanj · {potovanja.reduce((s, t) => s + t.kilometri, 0).toLocaleString('sl-SI')} km
+            </p>
+          </CardContent>
+          <CardFooter className="pt-0">
+            <Link to={ROUTES.VOZILA} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
+              Pregled vozil <ArrowRight className="h-3 w-3" />
+            </Link>
+          </CardFooter>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Skupni stroški</CardTitle>
             <Euro className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -294,24 +809,6 @@ export function DashboardPage(): React.JSX.Element {
           <CardFooter className="pt-0">
             <Link to={ROUTES.STROSKI} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
               Pregled stroškov <ArrowRight className="h-3 w-3" />
-            </Link>
-          </CardFooter>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Kandidati v Pipeline</CardTitle>
-            <UserPlus className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kandidati.length}</div>
-            <p className="text-xs text-muted-foreground">
-              v razlicnih fazah
-            </p>
-          </CardContent>
-          <CardFooter className="pt-0">
-            <Link to={ROUTES.PIPELINE} className="text-xs text-primary hover:underline inline-flex items-center gap-1">
-              Pregled Pipeline <ArrowRight className="h-3 w-3" />
             </Link>
           </CardFooter>
         </Card>
@@ -336,7 +833,7 @@ export function DashboardPage(): React.JSX.Element {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium text-red-900">{alert.naslov}</span>
-                      <Badge variant="destructive">Kriticno</Badge>
+                      <Badge variant="destructive">Kritično</Badge>
                     </div>
                     <p className="text-xs text-red-700 mt-0.5">{alert.opis}</p>
                   </div>
@@ -450,7 +947,7 @@ export function DashboardPage(): React.JSX.Element {
                     <div className="flex items-center gap-2 shrink-0">
                       <Badge variant="accent">{getStageName(kandidat.faza)}</Badge>
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {formatDate(kandidat.pricakovani_prihod)}
+                        {fmtDate(kandidat.pricakovani_prihod)}
                       </span>
                     </div>
                   </div>
