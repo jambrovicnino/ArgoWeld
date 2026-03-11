@@ -1,5 +1,5 @@
-import { useMemo, useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useMemo, useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import {
   BarChart,
   Bar,
@@ -36,6 +36,7 @@ import {
   Gauge,
   Camera,
   X,
+  Layers,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -51,7 +52,10 @@ import { useVehiclesStore } from '@/stores/vehiclesStore';
 import { EXPENSE_CATEGORIES, PIPELINE_STAGES, PROJECT_PHASES, ALERT_THRESHOLDS, DOC_TYPES } from '@/lib/constants';
 import { ROUTES } from '@/router/routes';
 import { formatDate, formatCurrency, getInitials, daysUntilExpiry, validityColor } from '@/lib/utils';
-import type { Alert, BudgetBreakdown, Worker, Vehicle } from '@/types';
+import type { Alert, BudgetBreakdown, Worker, Vehicle, Project } from '@/types';
+
+/* ─── Types ─── */
+type SearchCategory = 'vse' | 'delavci' | 'vozila' | 'projekti';
 
 /* ─── Helpers ─── */
 function sumBudget(budget: BudgetBreakdown): number {
@@ -102,9 +106,14 @@ function getBudgetProgressClass(percentage: number): string {
   return '[&>div]:bg-emerald-500';
 }
 
-function getDocTypeLabel(tipValue: string): string {
-  const docType = DOC_TYPES.find((d) => d.value === tipValue);
-  return docType?.label ?? tipValue;
+function getPhaseColor(faza: string): string {
+  switch (faza) {
+    case 'aktiven': return 'bg-emerald-100 text-emerald-800';
+    case 'mobilizacija': return 'bg-blue-100 text-blue-800';
+    case 'zakljucevanje': return 'bg-amber-100 text-amber-800';
+    case 'zakljucen': return 'bg-gray-100 text-gray-600';
+    default: return 'bg-gray-100 text-gray-600';
+  }
 }
 
 /* ─── Worker quick-view card (inline in dashboard search) ─── */
@@ -420,9 +429,159 @@ function VehicleQuickView({ vozilo }: { vozilo: Vehicle }): React.JSX.Element {
   );
 }
 
+/* ─── Project quick-view card ─── */
+function ProjectQuickView({ projekt }: { projekt: Project }): React.JSX.Element {
+  const budget = sumBudget(projekt.proracun);
+  const actual = sumBudget(projekt.dejanski_stroski);
+  const percentage = budget > 0 ? Math.round((actual / budget) * 100) : 0;
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex gap-4">
+        <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+          <FolderKanban className="h-8 w-8 text-emerald-600" />
+        </div>
+        <div className="min-w-0 space-y-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-lg font-bold">{projekt.naziv}</h3>
+            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${getPhaseColor(projekt.faza)}`}>
+              {getPhaseName(projekt.faza)}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{projekt.lokacija}, {projekt.drzava}</span>
+            <span className="flex items-center gap-1"><Building2 className="h-3.5 w-3.5" />{projekt.narocnik}</span>
+            <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{fmtDate(projekt.zacetek)} — {fmtDate(projekt.konec)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-emerald-50 rounded-lg px-3 py-2 text-center">
+          <p className="text-lg font-bold text-emerald-700">{projekt.napredek}%</p>
+          <p className="text-[10px] text-emerald-600 font-medium">Napredek</p>
+        </div>
+        <div className="bg-blue-50 rounded-lg px-3 py-2 text-center">
+          <p className="text-lg font-bold text-blue-700">{formatEur(budget)}</p>
+          <p className="text-[10px] text-blue-600 font-medium">Proračun</p>
+        </div>
+        <div className={`rounded-lg px-3 py-2 text-center ${percentage > 90 ? 'bg-red-50' : 'bg-amber-50'}`}>
+          <p className={`text-lg font-bold ${percentage > 90 ? 'text-red-700' : 'text-amber-700'}`}>{formatEur(actual)}</p>
+          <p className={`text-[10px] font-medium ${percentage > 90 ? 'text-red-600' : 'text-amber-600'}`}>Dejanski ({percentage}%)</p>
+        </div>
+        <div className="bg-purple-50 rounded-lg px-3 py-2 text-center">
+          <p className="text-lg font-bold text-purple-700">{projekt.razporeditve.length}</p>
+          <p className="text-[10px] text-purple-600 font-medium">Delavcev</p>
+        </div>
+      </div>
+
+      {/* Progress bar */}
+      <div className="space-y-1">
+        <div className="flex justify-between text-xs text-muted-foreground">
+          <span>Napredek projekta</span>
+          <span>{projekt.napredek}%</span>
+        </div>
+        <Progress value={projekt.napredek} className="h-2.5 [&>div]:bg-emerald-500" />
+      </div>
+
+      {/* Workers on project */}
+      {projekt.razporeditve.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Razporejeni delavci</p>
+          <div className="space-y-1.5">
+            {projekt.razporeditve.map((r) => (
+              <Link key={r.id} to={ROUTES.DELAVEC_DETAIL(r.delavec_id)} className="block">
+                <div className="flex items-center justify-between text-sm px-2 py-1.5 rounded bg-muted/50 hover:bg-muted transition-colors">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="truncate font-medium">{r.delavec_ime}</span>
+                    {r.vloga && <Badge variant="outline" className="text-[10px]">{r.vloga}</Badge>}
+                  </div>
+                  <span className="text-xs text-muted-foreground shrink-0">od {fmtDate(r.od)}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Partners */}
+      {projekt.partnerji.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Partnerji</p>
+          <div className="space-y-1.5">
+            {projekt.partnerji.map((p) => (
+              <div key={p.id} className="flex items-center justify-between text-sm px-2 py-1.5 rounded bg-muted/50">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="truncate font-medium">{p.naziv}</span>
+                </div>
+                <Badge variant={p.status === 'aktiven' ? 'success' : 'warning'} className="text-[10px] shrink-0">
+                  {p.status === 'aktiven' ? 'Aktiven' : 'V dogovoru'}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Notes */}
+      {projekt.opombe && (
+        <div className="bg-muted/30 rounded-lg px-3 py-2 text-sm text-muted-foreground italic">
+          {projekt.opombe}
+        </div>
+      )}
+
+      <Link to={ROUTES.PROJEKT_DETAIL(projekt.id)}>
+        <Button variant="outline" size="sm" className="w-full gap-1.5">
+          Odpri celoten projekt <ArrowRight className="h-3.5 w-3.5" />
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
+/* ─── Category filter button ─── */
+function CategoryButton({
+  active,
+  onClick,
+  icon,
+  label,
+  count,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+  count?: number;
+}): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`
+        flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all
+        ${active
+          ? 'bg-primary text-primary-foreground shadow-sm'
+          : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+        }
+      `}
+    >
+      {icon}
+      {label}
+      {count !== undefined && count > 0 && (
+        <span className={`ml-0.5 text-xs ${active ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+          ({count})
+        </span>
+      )}
+    </button>
+  );
+}
+
 /* ─── Main Dashboard ─── */
 export function DashboardPage(): React.JSX.Element {
-  const navigate = useNavigate();
   const { delavci } = useWorkersStore();
   const { projekti } = useProjectsStore();
   const { stroski } = useExpensesStore();
@@ -430,7 +589,8 @@ export function DashboardPage(): React.JSX.Element {
   const { vozila, potovanja } = useVehiclesStore();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedResult, setSelectedResult] = useState<{ type: 'delavec' | 'vozilo'; id: number } | null>(null);
+  const [searchCategory, setSearchCategory] = useState<SearchCategory>('vse');
+  const [selectedResult, setSelectedResult] = useState<{ type: 'delavec' | 'vozilo' | 'projekt'; id: number } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const aktivniDelavci = useMemo(
@@ -449,32 +609,59 @@ export function DashboardPage(): React.JSX.Element {
 
   // Search results for the central command search
   const searchResults = useMemo(() => {
-    if (!searchQuery || searchQuery.length < 2) return { workers: [] as Worker[], vehicles: [] as Vehicle[] };
     const q = searchQuery.toLowerCase();
+    const isFiltering = q.length >= 2;
 
-    const workers = delavci.filter((d) => {
-      const fullName = `${d.ime} ${d.priimek}`.toLowerCase();
-      return fullName.includes(q) || d.narodnost.toLowerCase().includes(q) || d.telefon.includes(q);
-    });
+    const workers = isFiltering
+      ? delavci.filter((d) => {
+          const fullName = `${d.ime} ${d.priimek}`.toLowerCase();
+          return fullName.includes(q)
+            || d.narodnost.toLowerCase().includes(q)
+            || d.telefon.includes(q)
+            || d.tipi_varjenja.some((t) => t.toLowerCase().includes(q));
+        })
+      : delavci;
 
-    const vehicles = vozila.filter((v) =>
-      v.naziv.toLowerCase().includes(q) ||
-      v.registrska.toLowerCase().includes(q) ||
-      (v.najemodajalec && v.najemodajalec.toLowerCase().includes(q))
-    );
+    const vehicles = isFiltering
+      ? vozila.filter((v) =>
+          v.naziv.toLowerCase().includes(q) ||
+          v.registrska.toLowerCase().includes(q) ||
+          (v.najemodajalec && v.najemodajalec.toLowerCase().includes(q))
+        )
+      : vozila;
 
-    return { workers, vehicles };
-  }, [searchQuery, delavci, vozila]);
+    const projects = isFiltering
+      ? projekti.filter((p) =>
+          p.naziv.toLowerCase().includes(q) ||
+          p.lokacija.toLowerCase().includes(q) ||
+          p.narocnik.toLowerCase().includes(q) ||
+          p.drzava.toLowerCase().includes(q)
+        )
+      : projekti;
 
-  const hasResults = searchResults.workers.length > 0 || searchResults.vehicles.length > 0;
+    return { workers, vehicles, projects };
+  }, [searchQuery, delavci, vozila, projekti]);
+
+  // Filtered by category
+  const filteredResults = useMemo(() => {
+    return {
+      workers: searchCategory === 'vse' || searchCategory === 'delavci' ? searchResults.workers : [],
+      vehicles: searchCategory === 'vse' || searchCategory === 'vozila' ? searchResults.vehicles : [],
+      projects: searchCategory === 'vse' || searchCategory === 'projekti' ? searchResults.projects : [],
+    };
+  }, [searchResults, searchCategory]);
+
+  const totalResults = filteredResults.workers.length + filteredResults.vehicles.length + filteredResults.projects.length;
   const isSearching = searchQuery.length >= 2;
 
-  // Handle clicking a search result — show inline detail
   function handleSelectWorker(id: number) {
     setSelectedResult({ type: 'delavec', id });
   }
   function handleSelectVehicle(id: number) {
     setSelectedResult({ type: 'vozilo', id });
+  }
+  function handleSelectProject(id: number) {
+    setSelectedResult({ type: 'projekt', id });
   }
   function clearSearch() {
     setSearchQuery('');
@@ -483,6 +670,7 @@ export function DashboardPage(): React.JSX.Element {
 
   const selectedWorker = selectedResult?.type === 'delavec' ? delavci.find((d) => d.id === selectedResult.id) : undefined;
   const selectedVehicle = selectedResult?.type === 'vozilo' ? vozila.find((v) => v.id === selectedResult.id) : undefined;
+  const selectedProject = selectedResult?.type === 'projekt' ? projekti.find((p) => p.id === selectedResult.id) : undefined;
 
   // Alerts: document issues for workers
   const alerts = useMemo((): Alert[] => {
@@ -631,14 +819,14 @@ export function DashboardPage(): React.JSX.Element {
               <Search className="h-6 w-6 text-primary" />
               <div>
                 <h2 className="text-lg font-semibold">Iskanje po bazi podatkov</h2>
-                <p className="text-sm text-muted-foreground">Vpišite ime delavca, vozila ali registrsko številko</p>
+                <p className="text-sm text-muted-foreground">Vpišite ime delavca, vozila, projekta ali registrsko številko</p>
               </div>
             </div>
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 ref={searchRef}
-                placeholder="Vpišite ime delavca ali vozila..."
+                placeholder="Vpišite ime delavca, vozila ali projekta..."
                 value={searchQuery}
                 onChange={(e) => { setSearchQuery(e.target.value); setSelectedResult(null); }}
                 className="pl-12 h-12 text-base bg-white border-2 focus-visible:ring-primary/20"
@@ -650,91 +838,157 @@ export function DashboardPage(): React.JSX.Element {
               )}
             </div>
 
-            {/* Search results */}
-            {isSearching && (
-              <div className="space-y-4">
-                {!hasResults && (
-                  <p className="text-center text-muted-foreground py-4">Ni rezultatov za "<span className="font-medium">{searchQuery}</span>"</p>
-                )}
+            {/* Category filter tabs */}
+            <div className="flex flex-wrap gap-2">
+              <CategoryButton
+                active={searchCategory === 'vse'}
+                onClick={() => { setSearchCategory('vse'); setSelectedResult(null); }}
+                icon={<Layers className="h-3.5 w-3.5" />}
+                label="Vse"
+                count={isSearching ? searchResults.workers.length + searchResults.vehicles.length + searchResults.projects.length : undefined}
+              />
+              <CategoryButton
+                active={searchCategory === 'delavci'}
+                onClick={() => { setSearchCategory('delavci'); setSelectedResult(null); }}
+                icon={<User className="h-3.5 w-3.5" />}
+                label="Delavci"
+                count={searchResults.workers.length}
+              />
+              <CategoryButton
+                active={searchCategory === 'vozila'}
+                onClick={() => { setSearchCategory('vozila'); setSelectedResult(null); }}
+                icon={<Car className="h-3.5 w-3.5" />}
+                label="Vozila"
+                count={searchResults.vehicles.length}
+              />
+              <CategoryButton
+                active={searchCategory === 'projekti'}
+                onClick={() => { setSearchCategory('projekti'); setSelectedResult(null); }}
+                icon={<FolderKanban className="h-3.5 w-3.5" />}
+                label="Projekti"
+                count={searchResults.projects.length}
+              />
+            </div>
 
-                {/* Worker results */}
-                {searchResults.workers.length > 0 && !selectedResult && (
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <User className="h-3.5 w-3.5" />Delavci ({searchResults.workers.length})
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {searchResults.workers.map((d) => (
-                        <button
-                          key={d.id}
-                          type="button"
-                          onClick={() => handleSelectWorker(d.id)}
-                          className="flex items-center gap-3 p-3 rounded-lg border bg-white hover:bg-accent/50 transition-colors text-left w-full"
-                        >
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold shrink-0">
-                            {getInitials(d.ime, d.priimek)}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">{d.ime} {d.priimek}</p>
-                            <p className="text-xs text-muted-foreground truncate">{d.narodnost} · {d.tipi_varjenja.join(', ')}</p>
-                          </div>
-                          <StatusBadge status={d.status} />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+            {/* Results area */}
+            <div className="space-y-4">
+              {isSearching && totalResults === 0 && (
+                <p className="text-center text-muted-foreground py-4">Ni rezultatov za &quot;<span className="font-medium">{searchQuery}</span>&quot;</p>
+              )}
 
-                {/* Vehicle results */}
-                {searchResults.vehicles.length > 0 && !selectedResult && (
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <Car className="h-3.5 w-3.5" />Vozila ({searchResults.vehicles.length})
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {searchResults.vehicles.map((v) => (
-                        <button
-                          key={v.id}
-                          type="button"
-                          onClick={() => handleSelectVehicle(v.id)}
-                          className="flex items-center gap-3 p-3 rounded-lg border bg-white hover:bg-accent/50 transition-colors text-left w-full"
-                        >
-                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
-                            <Car className="h-5 w-5 text-blue-600" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">{v.naziv}</p>
-                            <p className="text-xs text-muted-foreground font-mono">{v.registrska}</p>
-                          </div>
-                          <Badge variant={v.tip === 'lastno' ? 'success' : 'accent'} className="text-[10px] shrink-0">
-                            {v.tip === 'lastno' ? 'Lastno' : 'Najem'}
-                          </Badge>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Inline detail view */}
-                {selectedResult && (selectedWorker || selectedVehicle) && (
-                  <Card className="border-2 border-primary/10 bg-white">
-                    <CardContent className="pt-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedResult(null)}
-                          className="text-sm text-primary hover:underline flex items-center gap-1"
-                        >
-                          ← Nazaj na rezultate
-                        </button>
+              {/* Show results: either search results or browse-all */}
+              {!selectedResult && (
+                <>
+                  {/* Worker results */}
+                  {filteredResults.workers.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5" />Delavci ({filteredResults.workers.length})
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {filteredResults.workers.map((d) => (
+                          <button
+                            key={d.id}
+                            type="button"
+                            onClick={() => handleSelectWorker(d.id)}
+                            className="flex items-center gap-3 p-3 rounded-lg border bg-white hover:bg-accent/50 transition-colors text-left w-full"
+                          >
+                            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold shrink-0">
+                              {getInitials(d.ime, d.priimek)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">{d.ime} {d.priimek}</p>
+                              <p className="text-xs text-muted-foreground truncate">{d.narodnost} · {d.tipi_varjenja.join(', ')}</p>
+                            </div>
+                            <StatusBadge status={d.status} />
+                          </button>
+                        ))}
                       </div>
-                      {selectedWorker && <WorkerQuickView delavec={selectedWorker} />}
-                      {selectedVehicle && <VehicleQuickView vozilo={selectedVehicle} />}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            )}
+                    </div>
+                  )}
+
+                  {/* Vehicle results */}
+                  {filteredResults.vehicles.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <Car className="h-3.5 w-3.5" />Vozila ({filteredResults.vehicles.length})
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {filteredResults.vehicles.map((v) => (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => handleSelectVehicle(v.id)}
+                            className="flex items-center gap-3 p-3 rounded-lg border bg-white hover:bg-accent/50 transition-colors text-left w-full"
+                          >
+                            <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                              <Car className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">{v.naziv}</p>
+                              <p className="text-xs text-muted-foreground font-mono">{v.registrska}</p>
+                            </div>
+                            <Badge variant={v.tip === 'lastno' ? 'success' : 'accent'} className="text-[10px] shrink-0">
+                              {v.tip === 'lastno' ? 'Lastno' : 'Najem'}
+                            </Badge>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Project results */}
+                  {filteredResults.projects.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <FolderKanban className="h-3.5 w-3.5" />Projekti ({filteredResults.projects.length})
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {filteredResults.projects.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => handleSelectProject(p.id)}
+                            className="flex items-center gap-3 p-3 rounded-lg border bg-white hover:bg-accent/50 transition-colors text-left w-full"
+                          >
+                            <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                              <FolderKanban className="h-5 w-5 text-emerald-600" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">{p.naziv}</p>
+                              <p className="text-xs text-muted-foreground truncate">{p.lokacija}, {p.drzava} · {p.narocnik}</p>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-semibold shrink-0 ${getPhaseColor(p.faza)}`}>
+                              {getPhaseName(p.faza)}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Inline detail view */}
+              {selectedResult && (selectedWorker || selectedVehicle || selectedProject) && (
+                <Card className="border-2 border-primary/10 bg-white">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedResult(null)}
+                        className="text-sm text-primary hover:underline flex items-center gap-1"
+                      >
+                        ← Nazaj na rezultate
+                      </button>
+                    </div>
+                    {selectedWorker && <WorkerQuickView delavec={selectedWorker} />}
+                    {selectedVehicle && <VehicleQuickView vozilo={selectedVehicle} />}
+                    {selectedProject && <ProjectQuickView projekt={selectedProject} />}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
