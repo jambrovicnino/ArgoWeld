@@ -98,7 +98,7 @@ function StageSummary({ kandidati }: StageSummaryProps): React.JSX.Element {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg">Faze pipeline-a</CardTitle>
+        <CardTitle className="text-lg">Faze nabora</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-1 overflow-x-auto pb-2">
@@ -168,7 +168,7 @@ function StatsCards({ kandidati }: StatsCardsProps): React.JSX.Element {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{totalKandidati}</div>
-          <p className="text-xs text-muted-foreground">v vseh fazah pipeline-a</p>
+          <p className="text-xs text-muted-foreground">v vseh fazah nabora</p>
         </CardContent>
       </Card>
 
@@ -391,7 +391,7 @@ export function PipelinePage(): React.JSX.Element {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">Pipeline</h1>
+        <h1 className="text-2xl font-bold">Nabor kadrov</h1>
         <p className="text-muted-foreground mt-1">Kandidati v procesu</p>
       </div>
 
@@ -406,7 +406,7 @@ export function PipelinePage(): React.JSX.Element {
         <Card>
           <CardContent className="py-12 text-center">
             <UserPlus className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="text-muted-foreground">Ni kandidatov v pipeline-u</p>
+            <p className="text-muted-foreground">Ni kandidatov v naboru</p>
             <p className="text-xs text-muted-foreground mt-1">
               Dodajte prvega kandidata za zacetek sledenja
             </p>

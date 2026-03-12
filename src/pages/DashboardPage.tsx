@@ -1176,13 +1176,13 @@ export function DashboardPage(): React.JSX.Element {
           <CardHeader>
             <div className="flex items-center gap-2">
               <UserPlus className="h-5 w-5 text-muted-foreground" />
-              <CardTitle className="text-lg">Pipeline kandidati</CardTitle>
+              <CardTitle className="text-lg">Nabor kandidatov</CardTitle>
             </div>
             <CardDescription>Najblizji pricakovani prihodi</CardDescription>
           </CardHeader>
           <CardContent>
             {recentPipeline.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Ni kandidatov v Pipeline</p>
+              <p className="text-sm text-muted-foreground text-center py-8">Ni kandidatov v naboru</p>
             ) : (
               <div className="space-y-3">
                 {recentPipeline.map((kandidat) => (
@@ -1212,7 +1212,7 @@ export function DashboardPage(): React.JSX.Element {
           <CardFooter>
             <Link to={ROUTES.PIPELINE}>
               <Button variant="outline" size="sm">
-                Celoten Pipeline <ArrowRight className="h-4 w-4 ml-1" />
+                Celoten nabor <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
             </Link>
           </CardFooter>

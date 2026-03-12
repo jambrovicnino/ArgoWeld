@@ -41,7 +41,7 @@ const NAV_GROUPS: NavGroup[] = [
     title: 'KADRI',
     items: [
       { label: 'Delavci', icon: Users, path: ROUTES.DELAVCI },
-      { label: 'Pipeline', icon: GitBranch, path: ROUTES.PIPELINE },
+      { label: 'Nabor kadrov', icon: GitBranch, path: ROUTES.PIPELINE },
       { label: 'Dokumenti', icon: FileSearch, path: ROUTES.DOKUMENTI },
     ],
   },
