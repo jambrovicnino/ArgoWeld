@@ -18,9 +18,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState } from '@/components/common/EmptyState';
 import { useVehiclesStore } from '@/stores/vehiclesStore';
+import { useProjectsStore } from '@/stores/projectsStore';
 import { ROUTES } from '@/router/routes';
 import { formatDate, formatCurrency } from '@/lib/utils';
-import { Search } from 'lucide-react';
+import { Search, FolderKanban } from 'lucide-react';
 import type { Vehicle, VehicleTrip } from '@/types';
 
 function getVehicleTypeBadge(tip: Vehicle['tip']): React.JSX.Element {
@@ -34,6 +35,7 @@ function getVehicleTypeBadge(tip: Vehicle['tip']): React.JSX.Element {
 
 export function VozilaPage(): React.JSX.Element {
   const { vozila, potovanja } = useVehiclesStore();
+  const { projekti } = useProjectsStore();
   const [searchQuery, setSearchQuery] = useState('');
 
   const totalKm = useMemo(() => potovanja.reduce((sum, t) => sum + t.kilometri, 0), [potovanja]);
@@ -54,6 +56,22 @@ export function VozilaPage(): React.JSX.Element {
         (t.projekt_naziv && t.projekt_naziv.toLowerCase().includes(q))
     );
   }, [potovanja, searchQuery]);
+
+  // Map vehicle → latest project location (via trips)
+  const vehicleProject = useMemo(() => {
+    const map = new Map<number, { naziv: string; lokacija: string; drzava: string }>();
+    // Sort trips by date descending so first match per vehicle is latest
+    const sorted = [...potovanja].sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime());
+    for (const trip of sorted) {
+      if (trip.projekt_id && !map.has(trip.vozilo_id)) {
+        const proj = projekti.find((p) => p.id === trip.projekt_id);
+        if (proj) {
+          map.set(trip.vozilo_id, { naziv: proj.naziv, lokacija: proj.lokacija, drzava: proj.drzava });
+        }
+      }
+    }
+    return map;
+  }, [potovanja, projekti]);
 
   // Group trips by vehicle for stats
   const vehicleStats = useMemo(() => {
@@ -162,6 +180,14 @@ export function VozilaPage(): React.JSX.Element {
                               {formatDate(vozilo.datum_najema_od)} — {formatDate(vozilo.datum_najema_do)}
                             </span>
                           )}
+                        </div>
+                      )}
+
+                      {vehicleProject.get(vozilo.id) && (
+                        <div className="flex items-center gap-1.5 text-sm">
+                          <FolderKanban className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                          <span className="font-medium truncate">{vehicleProject.get(vozilo.id)!.lokacija}, {vehicleProject.get(vozilo.id)!.drzava}</span>
+                          <span className="text-muted-foreground truncate">— {vehicleProject.get(vozilo.id)!.naziv}</span>
                         </div>
                       )}
 
