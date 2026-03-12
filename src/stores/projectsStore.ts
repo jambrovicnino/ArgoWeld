@@ -8,7 +8,7 @@ interface ProjectsState {
   initialized: boolean;
   init: () => void;
   getProjekt: (id: number) => Project | undefined;
-  addProjekt: (p: Omit<Project, 'id'>) => void;
+  addProjekt: (p: Omit<Project, 'id'>) => number;
   updateProjekt: (id: number, data: Partial<Project>) => void;
   deleteProjekt: (id: number) => void;
   addPartner: (projectId: number, partner: Omit<ProjectPartner, 'id'>) => void;
@@ -28,8 +28,11 @@ export const useProjectsStore = create<ProjectsState>()(
         }
       },
       getProjekt: (id) => get().projekti.find((p) => p.id === id),
-      addProjekt: (p) =>
-        set((s) => ({ projekti: [...s.projekti, { ...p, id: Date.now() }] })),
+      addProjekt: (p) => {
+        const id = Date.now();
+        set((s) => ({ projekti: [...s.projekti, { ...p, id }] }));
+        return id;
+      },
       updateProjekt: (id, data) =>
         set((s) => ({
           projekti: s.projekti.map((p) => (p.id === id ? { ...p, ...data } : p)),
