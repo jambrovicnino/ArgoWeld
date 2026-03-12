@@ -86,7 +86,7 @@ export function DelavciListPage(): React.JSX.Element {
     <div className="space-y-6">
       <PageHeader title="Delavci" description="Seznam vseh delavcev">
         <Button asChild>
-          <Link to={ROUTES.PIPELINE}>
+          <Link to={ROUTES.DELAVEC_NOV}>
             <UserPlus className="mr-2 h-4 w-4" />
             Nov delavec
           </Link>

@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { DelavciListPage } from '@/pages/workers/DelavciListPage';
+import { DelavecCreatePage } from '@/pages/workers/DelavecCreatePage';
 import { DelavecDetailPage } from '@/pages/workers/DelavecDetailPage';
 import { ProjektiListPage } from '@/pages/projects/ProjektiListPage';
 import { ProjektCreatePage } from '@/pages/projects/ProjektCreatePage';
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'delavci', element: <DelavciListPage /> },
+      { path: 'delavci/nov', element: <DelavecCreatePage /> },
       { path: 'delavci/:id', element: <DelavecDetailPage /> },
       { path: 'projekti', element: <ProjektiListPage /> },
       { path: 'projekti/nov', element: <ProjektCreatePage /> },

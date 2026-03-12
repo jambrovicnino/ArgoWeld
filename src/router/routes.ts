@@ -1,6 +1,7 @@
 export const ROUTES = {
   DASHBOARD: '/',
   DELAVCI: '/delavci',
+  DELAVEC_NOV: '/delavci/nov',
   DELAVEC_DETAIL: (id: string | number) => `/delavci/${id}`,
   PROJEKTI: '/projekti',
   PROJEKT_NOV: '/projekti/nov',

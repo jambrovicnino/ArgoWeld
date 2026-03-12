@@ -8,7 +8,7 @@ interface WorkersState {
   initialized: boolean;
   init: () => void;
   getDelavec: (id: number) => Worker | undefined;
-  addDelavec: (d: Omit<Worker, 'id' | 'dokumenti' | 'zdravniski_pregledi' | 'delovna_zgodovina' | 'fotografije'>) => void;
+  addDelavec: (d: Omit<Worker, 'id' | 'dokumenti' | 'zdravniski_pregledi' | 'delovna_zgodovina' | 'fotografije'>) => number;
   updateDelavec: (id: number, data: Partial<Worker>) => void;
   deleteDelavec: (id: number) => void;
   addDocument: (workerId: number, doc: Omit<WorkerDocument, 'id' | 'delavec_id'>) => void;
@@ -32,10 +32,13 @@ export const useWorkersStore = create<WorkersState>()(
         }
       },
       getDelavec: (id) => get().delavci.find((d) => d.id === id),
-      addDelavec: (d) =>
+      addDelavec: (d) => {
+        const id = Date.now();
         set((s) => ({
-          delavci: [...s.delavci, { ...d, id: Date.now(), dokumenti: [], zdravniski_pregledi: [], delovna_zgodovina: [], fotografije: [] }],
-        })),
+          delavci: [...s.delavci, { ...d, id, dokumenti: [], zdravniski_pregledi: [], delovna_zgodovina: [], fotografije: [] }],
+        }));
+        return id;
+      },
       updateDelavec: (id, data) =>
         set((s) => ({
           delavci: s.delavci.map((d) => (d.id === id ? { ...d, ...data } : d)),
