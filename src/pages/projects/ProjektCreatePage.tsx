@@ -27,7 +27,7 @@ import { useWorkersStore } from '@/stores/workersStore';
 import { useVehiclesStore } from '@/stores/vehiclesStore';
 import { COUNTRIES, PROJECT_PHASES, WELDING_TYPES } from '@/lib/constants';
 import { ROUTES } from '@/router/routes';
-import type { ProjectPhase, BudgetBreakdown, WorkerAssignment } from '@/types';
+import type { ProjectPhase, BudgetBreakdown, WorkerAssignment, WeldingType } from '@/types';
 
 const BUDGET_LABELS: Record<keyof BudgetBreakdown, string> = {
   delo: 'Delo',
@@ -176,9 +176,7 @@ export function ProjektCreatePage() {
       telefon: '',
       email: '',
       urna_postavka: 0,
-      tipi_varjenja: newWorker.tipiVarjenja as WorkerAssignment extends never
-        ? never
-        : typeof newWorker.tipiVarjenja,
+      tipi_varjenja: newWorker.tipiVarjenja as WeldingType[],
       trenutni_projekt_id: null,
       status: 'zaposlen',
       datum_zaposlitve: today,
