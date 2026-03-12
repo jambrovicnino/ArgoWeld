@@ -23,6 +23,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useWorkersStore } from '@/stores/workersStore';
+import { usePipelineStore } from '@/stores/pipelineStore';
 import {
   WELDING_TYPES,
   WORKER_STATUSES,
@@ -31,7 +32,9 @@ import {
   PIPELINE_STAGES,
 } from '@/lib/constants';
 import { ROUTES } from '@/router/routes';
-import type { WorkerStatus, WeldingType, DocType, ValidityStatus } from '@/types';
+import type { WorkerStatus, WeldingType, DocType, ValidityStatus, PipelineStage } from '@/types';
+
+const PIPELINE_STAGE_VALUES = new Set<string>(PIPELINE_STAGES.map((s) => s.value));
 
 const nativeSelectClass =
   'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm';
@@ -105,6 +108,7 @@ const VALIDITY_OPTIONS: { value: ValidityStatus; label: string }[] = [
 export function DelavecCreatePage(): React.JSX.Element {
   const navigate = useNavigate();
   const { addDelavec, addDocument } = useWorkersStore();
+  const { addKandidat } = usePipelineStore();
 
   // --- Basic info ---
   const [ime, setIme] = useState('');
@@ -182,6 +186,26 @@ export function DelavecCreatePage(): React.JSX.Element {
           opombe: doc.opombe.trim() || undefined,
         });
       }
+    }
+
+    // Sync: if a pipeline stage was chosen, also add to Nabor kadrov
+    if (PIPELINE_STAGE_VALUES.has(status)) {
+      addKandidat({
+        ime: ime.trim(),
+        priimek: priimek.trim(),
+        narodnost: narodnost || 'Drugo',
+        tipi_varjenja: tipiVarjenja as string[],
+        faza: status as PipelineStage,
+        pricakovani_prihod: datumZaposlitve || new Date().toISOString().slice(0, 10),
+        opombe: opombe.trim(),
+        dokumenti: dokumenti
+          .filter((d) => d.naziv.trim() || d.datum_poteka)
+          .map((d) => ({
+            tip: d.tip,
+            naziv: d.naziv.trim() || DOC_TYPES.find((dt) => dt.value === d.tip)?.label || d.tip,
+            prejeto: d.status_veljavnosti === 'veljaven',
+          })),
+      });
     }
 
     navigate(ROUTES.DELAVEC_DETAIL(workerId));
