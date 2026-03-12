@@ -28,6 +28,7 @@ import {
   WORKER_STATUSES,
   NATIONALITIES,
   DOC_TYPES,
+  PIPELINE_STAGES,
 } from '@/lib/constants';
 import { ROUTES } from '@/router/routes';
 import type { WorkerStatus, WeldingType, DocType, ValidityStatus } from '@/types';
@@ -261,18 +262,27 @@ export function DelavecCreatePage(): React.JSX.Element {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="status">Status</Label>
+                  <Label htmlFor="status">Status / Faza nabora</Label>
                   <select
                     id="status"
                     className={nativeSelectClass}
                     value={status}
                     onChange={(e) => setStatus(e.target.value as WorkerStatus)}
                   >
-                    {WORKER_STATUSES.map((s) => (
-                      <option key={s.value} value={s.value}>
-                        {s.label}
-                      </option>
-                    ))}
+                    <optgroup label="Status">
+                      {WORKER_STATUSES.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Faze nabora">
+                      {PIPELINE_STAGES.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </optgroup>
                   </select>
                 </div>
               </div>

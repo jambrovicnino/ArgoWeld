@@ -26,6 +26,14 @@ const statusConfig: Record<
   poteka_kmalu: { label: "Poteče kmalu", variant: "warning" },
   potekel: { label: "Potekel", variant: "destructive" },
   manjka: { label: "Manjka", variant: "outline" },
+  // Pipeline stages
+  zainteresiran: { label: "Zainteresiran", variant: "secondary" },
+  test_nacrtrovan: { label: "Test načrtovan", variant: "default" },
+  test_opravljen: { label: "Test opravljen", variant: "accent" },
+  zbiranje_dokumentov: { label: "Zbiranje dokumentov", variant: "warning" },
+  vizum_vlozen: { label: "Vizum vložen", variant: "warning" },
+  vizum_odobren: { label: "Vizum odobren", variant: "success" },
+  prispel: { label: "Prispel", variant: "success" },
 };
 
 export function StatusBadge({

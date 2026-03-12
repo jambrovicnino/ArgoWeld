@@ -1,4 +1,6 @@
-export type WorkerStatus = 'zaposlen' | 'v_procesu' | 'v_dogovoru';
+import type { PipelineStage } from './pipeline.types';
+
+export type WorkerStatus = 'zaposlen' | 'v_procesu' | 'v_dogovoru' | PipelineStage;
 export type WeldingType = 'TIG' | 'MIG' | 'Stick' | 'Flux-Cored' | 'SAW' | 'Drugo';
 export type DocType = 'trc' | 'delovno_dovoljenje' | 'varilski_certifikat' | 'potni_list' | 'pogodba' | 'zdravnisko' | 'varstvo_pri_delu' | 'a1_obrazec';
 export type ValidityStatus = 'veljaven' | 'poteka_kmalu' | 'potekel' | 'manjka';
